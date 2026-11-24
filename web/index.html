@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#101a24" />
+    <title>衡析 · 指数归因研究台</title>
+    <link rel="stylesheet" href="/style.css" />
+    <script defer src="/app.js"></script>
+  </head>
+  <body>
+    <header>
+      <div class="top">
+        <div class="brand">
+          <i class="logo" aria-hidden="true">▥</i><strong>衡析</strong
+          ><span>指数归因研究台</span>
+        </div>
+        <nav aria-label="研究视图">
+          <button data-tab="analysis" aria-selected="true">归因分析</button
+          ><button data-tab="events">事件复盘</button
+          ><button data-tab="sources">数据目录</button>
+          <a href="/support">承接观察</a>
+        </nav>
+        <button class="outline" id="method">计算口径</button>
+      </div>
+    </header>
+    <main>
+      <div class="heading">
+        <div>
+          <h1 id="title">指数收益归因</h1>
+          <p id="subtitle">按交易日拆解指数涨跌，核对因子贡献与模型残差。</p>
+        </div>
+        <div class="snapshot">
+          <label
+            >数据快照
+            <select id="snapshot"></select></label
+          ><button id="refresh">更新数据</button>
+        </div>
+      </div>
+      <div id="feedback" role="status" hidden></div>
+      <section id="research">
+        <div class="targets" id="targets" aria-label="选择指数"></div>
+        <div class="filters">
+          <label
+            >研究区间<select id="range">
+              <option value="1y">近一年</option>
+              <option value="3m">近三个月</option>
+              <option value="3y">近三年</option>
+              <option value="all">全部历史</option>
+              <optgroup label="五年规划阶段" id="periods"></optgroup>
+              <option value="custom">自定义日期</option>
+            </select></label
+          >
+          <label>开始日期<input type="date" id="start" /></label
+          ><label>结束日期<input type="date" id="end" /></label>
+          <label
+            >因子组合<select id="model">
+              <option value="combined">市场与宏观</option>
+              <option value="domestic">境内股债</option>
+              <option value="macro">宏观因子</option>
+            </select></label
+          >
+          <label
+            >训练窗口<select id="window">
+              <option value="126">126 个交易日</option>
+              <option value="252" selected>252 个交易日</option>
+              <option value="504">504 个交易日</option>
+            </select></label
+          >
+          <label
+            >时点口径<select id="timing">
+              <option value="close">收盘解释</option>
+              <option value="lag">滞后一日检验</option>
+            </select></label
+          >
+        </div>
+        <div class="options">
+          <label
+            ><input type="checkbox" id="backfill" />
+            纳入指数发布前的回溯样本训练</label
+          ><a id="export">导出逐日明细 ↓</a>
+        </div>
+        <div id="content">
+          <div class="kpis">
+            <div>
+              <small>指数区间收益</small><strong id="k-total">—</strong
+              ><span id="k-dates"></span>
+            </div>
+            <div>
+              <small>沪深 300 同期收益</small><strong id="k-market">—</strong
+              ><span>价格指数 · 同区间基准</span>
+            </div>
+            <div>
+              <small>样本外 R²</small><strong id="k-r2">—</strong
+              ><span>相对过去训练样本均值</span>
+            </div>
+            <div>
+              <small>有效归因覆盖</small><strong id="k-cover">—</strong
+              ><span id="k-last"></span>
+            </div>
+          </div>
+          <div id="analysis">
+            <div class="split">
+              <section class="panel trend">
+                <div class="panel-title">
+                  <h2>累计收益走势</h2>
+                  <span class="muted">区间前收盘为基点</span>
+                </div>
+                <div class="chart-legend">
+                  <span><i class="teal"></i><b id="legend-name"></b></span
+                  ><span><i class="amber"></i>沪深300</span>
+                </div>
+                <div id="chart-box">
+                  <canvas
+                    id="chart"
+                    tabindex="0"
+                    aria-label="累计收益曲线，左右箭头选择交易日，回车查看归因"
+                  ></canvas>
+                  <div id="tooltip" hidden></div>
+                </div>
+                <div class="plot-foot">点击曲线查看该交易日的归因</div>
+              </section>
+              <section class="panel">
+                <div class="panel-title">
+                  <h2>区间收益拆解</h2>
+                  <span class="muted">贡献 · 百分点</span>
+                </div>
+                <div id="bars"></div>
+                <div class="plot-foot" id="reconcile"></div>
+              </section>
+            </div>
+            <section class="panel ledger">
+              <div class="panel-title">
+                <h2>模型对照</h2>
+                <span class="muted" id="common-days"></span>
+              </div>
+              <div class="scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>因子组合</th>
+                      <th>样本外 R²</th>
+                      <th>日收益 RMSE（百分点）</th>
+                    </tr>
+                  </thead>
+                  <tbody id="compare-rows"></tbody>
+                </table>
+              </div>
+              <p class="hint" id="increment"></p>
+            </section>
+            <section class="panel ledger">
+              <div class="panel-title">
+                <h2>逐日归因</h2>
+                <select id="sort" aria-label="明细排序">
+                  <option value="date">最近交易日优先</option>
+                  <option value="residual">绝对残差最大优先</option>
+                </select>
+              </div>
+              <div class="scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>交易日</th>
+                      <th>指数收盘</th>
+                      <th>实际涨跌</th>
+                      <th>模型解释</th>
+                      <th>模型残差</th>
+                      <th>归因状态</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody id="days"></tbody>
+                </table>
+              </div>
+              <div class="pager">
+                <span id="page-info"></span><button id="prev">上一页</button
+                ><button id="next">下一页</button>
+              </div>
+            </section>
+          </div>
+          <section class="panel" id="events" hidden>
+            <div class="panel-title">
+              <h2>事件窗口</h2>
+              <button id="new-event">登记事件</button>
+            </div>
+            <p class="hint">
+              以事件观察首日前一交易日收盘为基准，列出首日、5 日和 20
+              日实际累计收益。点击观察首日可核对当日模型解释与残差。
+            </p>
+            <div class="scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>日期 / 公开事件</th>
+                    <th>观察首日</th>
+                    <th>首日</th>
+                    <th>5 个交易日</th>
+                    <th>20 个交易日</th>
+                    <th>5 日残差贡献</th>
+                    <th>来源</th>
+                  </tr>
+                </thead>
+                <tbody id="event-rows"></tbody>
+              </table>
+            </div>
+            <p class="hint" id="no-events" hidden>
+              本区间没有收录事件。可切换到全部历史或其他规划阶段。
+            </p>
+          </section>
+          <section class="panel ledger" id="regimes" hidden>
+            <div class="panel-title">
+              <h2>规划阶段对照</h2>
+              <span class="muted">本指数全部可用历史</span>
+            </div>
+            <div class="scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>规划阶段</th>
+                    <th>实际区间</th>
+                    <th>交易日</th>
+                    <th>累计涨跌</th>
+                    <th>年化波动</th>
+                    <th>最大回撤</th>
+                  </tr>
+                </thead>
+                <tbody id="regime-rows"></tbody>
+              </table>
+            </div>
+            <p class="hint">
+              点击阶段查看当期归因。年化波动按 252
+              个交易日换算，最大回撤含区间起点；未满阶段按实际覆盖统计。
+            </p>
+          </section>
+        </div>
+      </section>
+      <section class="panel" id="sources" hidden>
+        <div class="panel-title">
+          <h2>数据目录</h2>
+          <span class="muted" id="source-time"></span>
+        </div>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>序列</th>
+                <th>数据提供方</th>
+                <th>首条观测</th>
+                <th>末条观测</th>
+                <th>有效点数</th>
+                <th>下载</th>
+              </tr>
+            </thead>
+            <tbody id="source-rows"></tbody>
+          </table>
+        </div>
+        <p class="hint">
+          原始响应按 SHA-256 留档。CSV
+          包含有效日期和指数点位。时区、样本起点与缺失值处理见计算口径。
+        </p>
+      </section>
+      <footer>
+        收盘后研究 · 北京时间 <span>数据按各自来源发布日期更新</span>
+      </footer>
+    </main>
+    <dialog id="detail">
+      <div class="panel-title">
+        <h2 id="detail-title"></h2>
+        <button class="close" aria-label="关闭">关闭</button>
+      </div>
+      <div id="detail-body"></div>
+    </dialog>
+    <dialog id="methods">
+      <div class="panel-title">
+        <h2>计算口径</h2>
+        <button class="close" aria-label="关闭">关闭</button>
+      </div>
+      <article>
+        <h3>收益与时间对齐</h3>
+        <p>
+          使用日收盘点位的简单收益，权益序列采用价格指数。沪深300作为境内交易日历。境内因子与目标同日收盘，海外因子使用严格早于
+          A 股交易日的最近观测；超过 5
+          个自然日或超出数据末端后的首个境内交易日，停止沿用。日元采用 BIS
+          广义名义有效汇率，美元采用 DXY。上证国债指数包含利息及再投资收益。
+        </p>
+        <h3>逐日估计与样本外检验</h3>
+        <p>
+          对每个目标日，仅用之前 126、252 或 504
+          个目标交易日拟合含截距的多元线性回归，至少 95%
+          训练行须完整。默认训练仅使用指数发布后的样本。当天的因子贡献等于历史系数乘以当天对齐后的因子收益。滞后一日检验将全部因子整体后移一个境内交易日。样本外
+          R² 用模型平方误差与历史训练均值的平方误差比较，允许小于零；不足 20
+          个有效观察时留空。
+        </p>
+        <h3>区间对账</h3>
+        <p>
+          把每日贡献乘以此前累计的区间净值再相加，所得为对期初资金的贡献百分点。因子、截距、残差与未建模交易日之和等于区间实际复合收益。资料不足或矩阵不可辨识时，该日实际涨跌全部进入未建模项。
+        </p>
+        <h3>解读边界</h3>
+        <p>
+          同日沪深300收益反映境内市场共振，成分重叠会提高解释度。相关因子的分摊依赖模型设定。海外资料采用采集日可见的历史修订版本，BIS
+          观测日与公布日可不同。样本外衡量系数的滚动留出表现，无法据此还原当时可交易信息或证明因果。事件及规划阶段用于复盘，同期其他政策和冲击也会影响收益。
+        </p>
+        <h3>采集与重现</h3>
+        <p>
+          记录来源
+          URL、点数、截止日、采集时间、原始响应及校验值。整批更新通过校验后才切换快照。运行期间每小时检查一次，工作日
+          18:00 后补采当日数据，也可手动更新。中国市场在北京时间 16:00
+          后纳入当日，美元指数使用已结束的纽约交易日。
+        </p>
+      </article>
+    </dialog>
+    <dialog id="event-form">
+      <div class="panel-title">
+        <h2>登记研究事件</h2>
+        <button class="close">关闭</button>
+      </div>
+      <form id="annotation">
+        <label>公开日期<input required type="date" name="day" /></label
+        ><label>事件标题<input required maxlength="90" name="title" /></label
+        ><label
+          >公开时间<select name="session">
+            <option value="next">盘后或时点不详 · 下一交易日开始观察</option>
+            <option value="same">盘前或盘中 · 当日起观察</option>
+          </select></label
+        ><label
+          >公开来源链接<input
+            type="url"
+            name="url"
+            required
+            placeholder="https://"
+        /></label>
+        <p class="hint">
+          登记后会加入本机事件目录。每个数据快照均可用这份目录复盘。
+        </p>
+        <p id="event-error" role="status"></p>
+        <button type="submit">保存事件</button>
+      </form>
+    </dialog>
+  </body>
+</html>

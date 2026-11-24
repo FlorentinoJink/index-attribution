@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>异常承接观察 · 衡析</title><link rel="stylesheet" href="/style.css"></head>
+<body class="support-page"><header><div class="top"><div class="brand"><i class="logo" aria-hidden="true">▥</i><strong>衡析</strong><span>指数归因研究台</span></div>
+<nav aria-label="研究视图"><a href="/">归因分析</a><a href="/?tab=events">事件复盘</a><a href="/?tab=sources">数据目录</a><a href="/support" aria-current="page">承接观察</a></nav></div></header>
+<main><div class="heading"><div><h1>异常承接观察</h1><p>通过沪深 300 和三只沪市 ETF 的价量，寻找下跌中同步放量、随后收回跌幅的交易日。</p></div><a href="/support">最新快照 ↗</a></div>
+<section class="panel"><div class="panel-title"><h2>下一交易日预警</h2><span class="muted">$last 收盘</span></div>
+<div class="kpis"><div><small>收盘预警</small><strong>$latest</strong><span>三项条件须同时满足</span></div>
+<div><small>距近 20 日收盘高点</small><strong>$drawdown</strong><span>回落至少 3%</span></div>
+<div><small>成交额达到常态 1.5 倍</small><strong>$volume / 3</strong><span>至少两只 ETF 同时放量</span></div>
+<div><small>最近五日均无异常承接</small><strong>$quiet</strong><span>寻找一轮承接的开始</span></div></div>
+<p class="hint">预警只使用当日收盘时可算出的数据。次日若发生下方定义的异常承接，记为命中。收盘时触发的提示最早可在下一交易日开盘后跟踪。</p></section>
+<section class="panel"><div class="panel-title"><h2>提前一天，历史上有多准？</h2><span class="muted">按发出提示的日期分组</span></div>
+<p class="hint">自 2024 年起共发出 <strong>$calls</strong> 次已到期预警。次日出现异常承接 <strong>$hits</strong> 次，其余 <strong>$misses</strong> 次没有出现。</p>
+<p class="hint"><strong>上线后实记</strong> · 当前规则已在 $live_days 个交易日收盘后固定记录，触发 $live_calls 次，到期 $live_settled 次，命中 $live_hits 次。服务运行并采集当日数据时记录，错过的提示不回填。</p>
+<div class="scroll"><table><thead><tr><th>检验期</th><th>预警后命中 / 预警数</th><th>对照日命中 / 对照数</th><th>提前捕捉 / 全部新一轮承接</th><th>预警组次日日内均涨跌</th><th>对照组次日日内均涨跌</th></tr></thead><tbody>$timing</tbody></table></div>
+<p class="hint">对照日同样从近 20 日高点回落至少 3%，且近五日均无异常承接，但同步放量不足。次日日内涨跌仅描述 510300 开盘至收盘的价格变化。统计只纳入已有次日结果的预警，下方早期样本使用相同规则。邻近日期可能属于同一段行情。</p></section>
+<section class="panel"><div class="panel-title"><h2>当日承接复盘</h2><form method="get" action="/support" class="support-filter"><input type="hidden" name="snapshot" value="$run"><label>年份 <select name="year">$years</select></label><label>记录 <select name="mode">$modes</select></label><button>查看</button></form></div>
+<p class="hint">沪深 300 盘中较昨收跌至少 1%，计为承压日。若三只 ETF 中至少两只成交额达到各自过去 60 个交易日中位数的 2 倍，且指数收盘收回至少一半盘中跌幅，记为一次异常承接。</p>
+<div class="kpis"><div><small>区间承压日</small><strong>$count</strong><span>沪深 300 触及盘中跌幅门槛</span></div><div><small>异常承接日</small><strong>$candidates</strong><span>同步放量且收回一半跌幅</span></div>
+<div><small>放量组收回一半</small><strong class="support-rate">$heavy</strong><span>回升天数 / 放量承压日</span></div><div><small>普通量组收回一半</small><strong class="support-rate">$plain</strong><span>回升天数 / 其他承压日</span></div></div>
+<div class="scroll"><table><thead><tr><th>日期</th><th>盘中最低较昨收</th><th>收盘涨跌</th><th>510300 成交倍数</th><th>510310 倍数</th><th>510330 倍数</th><th>当日表现</th><th>相近跌幅对照日回升</th><th>该日预警的次日结果</th></tr></thead><tbody>$records</tbody></table></div>
+<div class="pager">$nav</div><p class="hint">每行对照取此前 504 个交易日，限普通量承压日，盘中跌幅相差不超过 0.35 个百分点。</p></section>
+<section class="panel"><div class="panel-title"><h2>数据与解释边界</h2><span class="muted">独立快照 $run</span></div>
+<p class="hint">上交所日线 · 有效区间 $first 至 $last · 采集于 $captured。三只 ETF 都跟踪沪深 300，分别为华泰柏瑞、易方达和华夏。成交额同时包含买卖双方，机构调仓、套利和平常的市场反弹也可能触发。当前数据没有买方账户、资金净流入或成交时刻，信号只描述价量形态。</p>
+<p class="hint">$sources · <a href="/support.csv?snapshot=$run">下载此快照的逐日计算明细 ↓</a></p></section></main></body></html>
